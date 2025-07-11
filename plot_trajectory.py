@@ -75,9 +75,4 @@ figure8 = [
 ]
 
 
-
-
-
-    # Plot both trajectories
-#plot_trajectory(figure8, "Original Figure 8")
 plot_trajectory(figure8, "figure8")
