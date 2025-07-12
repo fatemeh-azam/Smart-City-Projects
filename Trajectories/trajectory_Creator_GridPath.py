@@ -1,18 +1,20 @@
 # ------------------------------------------------------------------------------
-# Drone Grid-Based Trajectory Generation and Execution
+# Drone Grid-Based Trajectory Generation, Visualization, and Execution
 #
 # Author: Fatemeh Azam
 # Email: faa5778@utulsa.edu
 #
 # Description:
-#     This module generates grid-based delivery-style trajectories for Crazyflie
-#     drones using Poly4D path segments. It supports uploading and executing
-#     those trajectories using the Mellinger controller.
+#     This script generates, visualizes, and executes grid-based
+#     trajectories for Crazyflie drones. Paths follow strict vertical/horizontal
+#     alignment with delivery-style maneuvers: descend, hover, and ascend.
 #
 # Key Features:
-#     - Grid-aligned drone path planning
-#     - Delivery motion profiles (descend → hover → ascend)
-#     - Swarm-compatible trajectory upload and execution
+#     - Grid-constrained flight planning
+#     - Package drop simulation (descend → hover → ascend)
+#     - Interactive 2D path visualization
+#     - Trajectory upload and swarm-based execution
+# 
 #
 # Dependencies:
 #     - cflib (https://github.com/bitcraze/crazyflie-lib-python)
