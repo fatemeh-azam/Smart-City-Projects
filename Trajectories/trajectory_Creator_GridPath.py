@@ -207,6 +207,52 @@ def execute_trajectory(scf):
     time.sleep(2.0)
     cf.high_level_commander.stop()
 
+
+# ------------------------------------------------------------------------------
+# Trajectory Visualization
+# ------------------------------------------------------------------------------
+def plot_trajectory(start_point, delivery_points, trajectory):
+    """
+    Visualizes the drone's 2D flight trajectory on the XY plane.
+
+    The plot includes the start position, delivery waypoints,
+    and the flight path segments derived from the trajectory polynomial coefficients.
+
+    Args:
+        start_point (tuple): The initial (x, y) coordinates of the drone.
+        delivery_points (list): List of (x, y) coordinates representing delivery waypoints.
+        trajectory (list): List of Poly4D objects defining the drone's path segments.
+
+    Returns:
+        None. Displays a matplotlib plot showing the drone's path and delivery points.
+    """
+    plt.figure(figsize=(10, 8))
+    x_points = [start_point[0]]
+    y_points = [start_point[1]]
+
+    for segment in trajectory:
+        x_start = segment.x.values[0]
+        x_end = x_start + segment.x.values[1] * (segment.duration / 1000.0) if len(segment.x.values) > 1 else x_start
+        y_start = segment.y.values[0]
+        y_end = y_start + segment.y.values[1] * (segment.duration / 1000.0) if len(segment.y.values) > 1 else y_start
+
+        if not (math.isclose(x_start, x_end) and math.isclose(y_start, y_end)):
+            x_points.extend([x_start, x_end])
+            y_points.extend([y_start, y_end])
+
+    for point in delivery_points:
+        plt.plot(point[0], point[1], 'ro', markersize=10)
+
+    plt.plot(x_points, y_points, 'b-', linewidth=2, label='Flight Path')
+    plt.plot(start_point[0], start_point[1], 'go', markersize=10, label='Start')
+    plt.xlabel('X position (m)')
+    plt.ylabel('Y position (m)')
+    plt.title('Drone Trajectory (XY Plane)')
+    plt.grid(True)
+    plt.axis('equal')
+    plt.legend()
+    plt.show()
+
 # ------------------------------------------------------------------------------
 # Mission Definitions
 # ------------------------------------------------------------------------------
@@ -245,7 +291,13 @@ if __name__ == '__main__':
             print(f"  Z: {segment.z}")
             print(f"  Yaw: {segment.yaw}")
 
-    # Step 2: Connect and execute
+    # Step 2: Visualize
+    for uri, trajectory in trajectories.items():
+        start_point = missions[uri][0]
+        delivery_points = missions[uri][1]
+        plot_trajectory(start_point, delivery_points, trajectory)
+
+    # Step 3: Connect and execute
     factory = CachedCfFactory(rw_cache='./cache')
     with Swarm(missions.keys(), factory=factory) as swarm:
         swarm.parallel_safe(
@@ -257,4 +309,3 @@ if __name__ == '__main__':
         swarm.parallel_safe(arm)
         time.sleep(3)
         swarm.parallel_safe(execute_trajectory)
-
