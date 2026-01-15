@@ -1,41 +1,127 @@
-Crazyflie Trajectory Segment Format (7th-Order Polynomial)
+# Smart City Drone Testbed: Secure Autonomous Micro-Aerial Systems
 
-Each row of the trajectory array represents a segment, and the drone's position is defined by a 7th-order polynomial for x, y, and z over time t.
+This repository contains a modular smart city testbed designed to study autonomous micro-aerial vehicle (MAV) operations,
+cybersecurity vulnerabilities, and real-time anomaly detection in urban infrastructure environments.
 
-Each segment looks like this:
+The testbed uses Crazyflie micro-drones as a research platform and focuses on secure command-and-control,
+trajectory planning, and attack-resilient autonomy.
 
-[start_time, duration,
+---
 
- x0, x1, x2, x3, x4, x5, x6, x7,
+## Project Objectives
 
- y0, y1, y2, y3, y4, y5, y6, y7,
- 
- z0, z1, z2, z3, z4, z5, z6, z7]
+- Design autonomous drone missions for smart city use cases (delivery, inspection, monitoring)
+- Analyze application-layer vulnerabilities in drone command protocols
+- Simulate command injection, hijacking, and spoofing attacks
+- Detect anomalous flight behavior caused by cyber attacks
+- Explore secure middleware solutions using Rust for real-time command validation
 
-Total columns = 2 (time) + 3×8 (x, y, z coefficients) = 26 columns
+---
 
- What Each Field Means
+## Repository Structure
 
-•	start_time: when this segment begins
 
-•	duration: how long this segment lasts
+smart-city-testbed/
+├── flight-control/
+│   ├── trajectory-planning/
+│   ├── battery-monitoring/
+│   └── mission-definitions/
+│
+├── anomaly-detection/
+│   ├── telemetry-monitoring/
+│   ├── trajectory-validation/
+│   └── detection-rules/
+│
+├── hijacking-simulation/
+│   ├── hacked-motion-commander/
+│   ├── hacked-hl-commander/
+│   └── attack-scenarios/
+│
+├── security/
+│   └── rust-secure-middleware/   # In progress
+│
+├── docs/
+│   ├── architecture.md
+│   ├── threat-model.md
+│   └── diagrams/
+│
+└── README.md
 
-For each axis (x, y, z), there are 8 coefficients:
 
-•	x0 to x7: coefficients for x(t)
+## Flight Control
 
-•	y0 to y7: coefficients for y(t)
+The flight-control/ module implements autonomous mission execution for Crazyflie drones, including:
 
-•	z0 to z7: coefficients for z(t)
+Grid-based trajectory planning for smart-road environments
 
-Each is used in a 7th-degree polynomial:
+Battery-aware mission validation and remaining flight-time estimation
 
-x(t) = x0 + x1*t + x2*t² + x3*t³ + x4*t⁴ + x5*t⁵ + x6*t⁶ + x7*t⁷
+Predefined waypoint missions with controlled takeoff, delivery descent, and return-to-base logic
 
-y(t) = y0 + y1*t + y2*t² + ... + y7*t⁷
+Integration with the Crazyflie Loco Positioning System (LPS)
 
-z(t) = z0 + z1*t + z2*t² + ... + z7*t⁷
+This module serves as the baseline for normal, expected drone behavior.
 
-Where t is the local time within that segment:
+## Anomaly Detection
 
-0 ≤ t ≤ duration
+The anomaly-detection/ module monitors live telemetry and compares actual drone behavior against expected trajectories.
+
+Key capabilities include:
+
+Real-time trajectory deviation detection
+
+Velocity and position threshold analysis
+
+Detection of unexpected command frequency or sudden path changes
+
+Logging of anomalous events for post-flight analysis
+
+This module is used to identify deviations caused by faults or active cyber attacks.
+
+## Hijacking Simulation
+
+The hijacking-simulation/ module demonstrates application-layer vulnerabilities in the Crazyflie control protocol.
+
+Implemented attack scenarios include:
+
+Simultaneous connection of multiple Crazyradios to a single drone
+
+Command flooding to override legitimate flight controllers
+
+Spoofing of waypoint coordinates mid-flight
+
+Forced trajectory deviation and mission disruption
+
+This module provides realistic attack data for evaluating detection and mitigation strategies.
+
+Secure Middleware (In Progress)
+
+The security/ module contains an in-progress Rust-based secure commander middleware designed to:
+
+Act as a mandatory command-validation gateway
+
+Enforce cryptographic authentication of flight commands
+
+Prevent unauthorized controllers from injecting commands
+
+Rate-limit command traffic and detect malicious patterns
+
+This work extends the hijacking simulations toward real-world defense mechanisms.
+
+## Experimental Setup
+
+Crazyflie Brushless micro-drones
+
+Crazyradio PA
+
+Lighthouse Positioning System (LPS)
+
+## 📊 Applications & Use Cases
+
+Smart road and delivery simulations
+
+Secure autonomous fleet research
+
+Cybersecurity education and training
+
+UAV attack detection and response evaluation
