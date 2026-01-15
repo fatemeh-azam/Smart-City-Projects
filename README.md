@@ -29,7 +29,7 @@ Battery-aware mission validation and remaining flight-time estimation
 
 Predefined waypoint missions with controlled takeoff, delivery descent, and return-to-base logic
 
-Integration with the Crazyflie Loco Positioning System (LPS)
+Integration with the Crazyflie Light House Positioning System 
 
 This module serves as the baseline for normal, expected drone behavior.
 
