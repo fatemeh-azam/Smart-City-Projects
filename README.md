@@ -18,35 +18,6 @@ trajectory planning, and attack-resilient autonomy.
 
 ---
 
-## Repository Structure
-
-
-smart-city-testbed/
-├── flight-control/
-│   ├── trajectory-planning/
-│   ├── battery-monitoring/
-│   └── mission-definitions/
-│
-├── anomaly-detection/
-│   ├── telemetry-monitoring/
-│   ├── trajectory-validation/
-│   └── detection-rules/
-│
-├── hijacking-simulation/
-│   ├── hacked-motion-commander/
-│   ├── hacked-hl-commander/
-│   └── attack-scenarios/
-│
-├── security/
-│   └── rust-secure-middleware/   # In progress
-│
-├── docs/
-│   ├── architecture.md
-│   ├── threat-model.md
-│   └── diagrams/
-│
-└── README.md
-
 
 ## Flight Control
 
