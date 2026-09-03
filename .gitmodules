@@ -1,0 +1,3 @@
+[submodule "smartcity-monitor/sensors"]
+	path = smartcity-monitor/sensors
+	url = https://github.com/fatemehazam-crypto/smart-city-sensors.git
