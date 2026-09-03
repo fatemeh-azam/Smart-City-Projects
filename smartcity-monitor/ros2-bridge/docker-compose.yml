@@ -1,0 +1,15 @@
+services:
+  ros2-bridge:
+    build: .
+    container_name: crazyflie_ros2_bridge
+    restart: unless-stopped
+    environment:
+      - ROS_DOMAIN_ID=0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Bags are written inside the container to /bags
+      # and appear on your Windows machine at C:\ros2-bridge\bags
+      - ./bags:/bags
+
+  

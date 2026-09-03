@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Tactical RF Mapper — Smart City Monitor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0e0e10;color:#e8e8e6;min-height:100vh;padding:14px 18px}
+
+.page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid #2e2e30}
+.page-title{font-size:15px;font-weight:500;letter-spacing:-0.01em}
+.page-sub{font-size:10px;color:#555;letter-spacing:.04em;margin-top:2px}
+
+.mode-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:#1a1a1c;border:0.5px solid #2e2e30;border-radius:10px;flex-wrap:wrap}
+.mode-btn{font-size:12px;padding:5px 14px;border-radius:6px;cursor:pointer;border:0.5px solid #2e2e30;background:#111113;color:#888;font-family:inherit;font-weight:500;transition:all .15s}
+.mode-btn.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.mode-lbl{font-size:10px;color:#555;margin-left:auto}
+
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.stat{background:#1a1a1c;border:0.5px solid #2e2e30;border-radius:8px;padding:8px 10px}
+.stat-l{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.stat-v{font-size:18px;font-weight:500}
+
+.map-outer{background:#111113;border:0.5px solid #2e2e30;border-radius:12px;overflow:hidden;margin-bottom:10px}
+canvas{display:block;width:100%;cursor:default}
+.map-hint{font-size:10px;color:#444;text-align:center;padding:5px 0 7px}
+
+.toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;background:#1a1a1c;border:0.5px solid #2e2e30;border-radius:10px}
+.tb-lbl{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.tb-sep{width:0.5px;height:20px;background:#2e2e30;margin:0 2px;flex-shrink:0}
+
+button{font-family:inherit;font-size:11px;padding:5px 11px;border-radius:6px;cursor:pointer;border:0.5px solid #2e2e30;background:#1a1a1c;color:#e8e8e6;white-space:nowrap}
+button:hover{background:#2e2e30}
+button.primary{background:#185FA5;color:#fff;border-color:#185FA5}
+button.primary:hover{background:#378ADD}
+button.success{background:#0a2e1e;color:#1D9E75;border-color:#0F6E56}
+button.success:hover{background:#0F3020}
+button.active-tool{background:#0a2e1e;color:#1D9E75;border-color:#0F6E56}
+button.danger{background:#2e0a0a;color:#E24B4A;border-color:#A32D2D}
+
+.pk{font-size:10px;padding:3px 8px;border-radius:20px;cursor:pointer;border:0.5px solid #2e2e30;background:#111113;color:#666;font-family:inherit}
+.pk.sel{border-width:1.5px}
+
+/* Edit panel */
+.edit-panel{background:#1a1a1c;border:0.5px solid #2e2e30;border-radius:12px;padding:14px;margin-bottom:10px}
+.ep-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ep-title{font-size:13px;font-weight:500}
+.ep-body{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.ep-section{margin-bottom:10px}
+.ep-section-t{font-size:10px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;padding-bottom:4px;border-bottom:0.5px solid #2e2e30}
+.fr{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.fr label{font-size:11px;color:#666;width:130px;flex-shrink:0}
+.fr input,.fr select{flex:1;font-size:11px;font-family:inherit;padding:4px 8px;border:0.5px solid #2e2e30;border-radius:6px;background:#0e0e10;color:#e8e8e6;outline:none}
+.fr input:focus,.fr select:focus{border-color:#378ADD}
+.fr .unit{font-size:10px;color:#555;flex-shrink:0}
+.fr input[type=checkbox]{width:16px;height:16px;flex:none;accent-color:#378ADD}
+.thresh-note{font-size:10px;color:#444;margin-top:2px;margin-bottom:6px;font-style:italic}
+.ep-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:0.5px solid #2e2e30}
+
+/* Sim controls */
+.sim-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.ctrl{background:#1a1a1c;border:0.5px solid #2e2e30;border-radius:10px;padding:10px 12px}
+.ctrl-t{font-size:10px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+.sl{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.sl label{font-size:11px;color:#666;width:110px;flex-shrink:0}
+.sl input[type=range]{flex:1;accent-color:#378ADD}
+.sl .v{font-size:11px;font-weight:500;color:#e8e8e6;min-width:52px;text-align:right}
+.env-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.eb{font-size:10px;padding:3px 8px;border-radius:20px;cursor:pointer;border:0.5px solid #2e2e30;background:#111113;color:#666;font-family:inherit}
+.eb.active{background:#0a1a2e;color:#378ADD;border-color:#185FA5}
+
+/* Node grid */
+.node-panel{background:#1a1a1c;border:0.5px solid #2e2e30;border-radius:12px;padding:12px;margin-bottom:10px}
+.np-t{font-size:10px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.ng{display:flex;flex-wrap:wrap;gap:4px}
+.nt{border-radius:8px;padding:6px 10px;text-align:center;border:0.5px solid #2e2e30;cursor:pointer;min-width:80px}
+.nt:hover{border-color:#444}
+.nt-icon{font-size:12px;margin-bottom:1px}
+.nt-lbl{font-size:9px;color:#666;font-weight:500}
+.nt-sub{font-size:8px;color:#444;margin-top:1px}
+.nt-js{font-size:10px;font-weight:500;margin-top:1px}
+.nt-loss{font-size:9px;color:#555}
+
+.dp{margin-top:10px;background:#111113;border:0.5px solid #2e2e30;border-radius:10px;padding:12px}
+.dp-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.dg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.ds{background:#1a1a1c;border-radius:8px;padding:8px 10px}
+.ds-l{font-size:10px;color:#555;margin-bottom:2px}
+.ds-v{font-size:15px;font-weight:500}
+.interp{font-size:11px;color:#888;line-height:1.6;padding:8px 10px;background:#1a1a1c;border-radius:6px;border-left:2px solid #2e2e30}
+.pill{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px}
+.pill-ok{background:#0a2e1e;color:#1D9E75}
+.pill-w{background:#2e1e05;color:#BA7517}
+.pill-c{background:#2e0a0a;color:#E24B4A}
+
+/* Push to backend panel */
+.push-panel{background:#1a1a1c;border:0.5px solid #2e2e30;border-radius:12px;padding:12px;margin-bottom:10px}
+.push-t{font-size:10px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.push-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.push-status{font-size:11px;color:#555;margin-top:6px}
+.push-status.ok{color:#1D9E75}
+.push-status.err{color:#E24B4A}
+
+.scen-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.scen-lbl{font-size:10px;color:#555}
+
+textarea{width:100%;font-family:'Courier New',monospace;font-size:10px;resize:vertical;min-height:56px;border:0.5px solid #2e2e30;border-radius:6px;background:#0e0e10;color:#e8e8e6;padding:8px;outline:none;margin-bottom:6px}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.confirm-box{background:#1a1a1c;border:0.5px solid #2e2e30;border-radius:12px;padding:24px;max-width:340px;text-align:center}
+.confirm-box h3{font-size:14px;margin-bottom:8px}
+.confirm-box p{font-size:12px;color:#888;margin-bottom:16px;line-height:1.5}
+.confirm-btns{display:flex;gap:8px;justify-content:center}
+
+code{font-family:'Courier New',monospace;font-size:10px;color:#378ADD;background:#0a1a2e;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="page-hdr">
+  <div>
+    <div class="page-title">Tactical RF Mapper</div>
+    <div class="page-sub">LAYOUT EDITOR · SENSOR DEFINITION · RF SIMULATION</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="sync-badge" style="font-size:10px;padding:3px 9px;border-radius:20px;background:#0a2e1e;color:#1D9E75;border:0.5px solid #0F6E56;display:none">✓ Synced to backend</span>
+    <a href="http://localhost:3000" style="font-size:11px;padding:5px 12px;border-radius:6px;border:0.5px solid #2e2e30;background:#1a1a1c;color:#888;text-decoration:none">← Dashboard</a>
+  </div>
+</div>
+
+<!-- Mode bar -->
+<div class="mode-bar">
+  <button class="mode-btn active" id="btn-setup" onclick="setMode('setup')">⚙ Setup</button>
+  <button class="mode-btn" id="btn-sim" onclick="setMode('sim')">◎ Simulate</button>
+  <span class="mode-lbl" id="mode-lbl">Setup — place buildings and sensors, define monitoring parameters</span>
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat"><div class="stat-l">Buildings</div><div class="stat-v" id="s-bldg" style="color:#BA7517">0</div></div>
+  <div class="stat"><div class="stat-l">Sensors</div><div class="stat-v" id="s-sens" style="color:#378ADD">0</div></div>
+  <div class="stat"><div class="stat-l">Configured</div><div class="stat-v" id="s-cfg" style="color:#1D9E75">0</div></div>
+  <div class="stat"><div class="stat-l">At risk</div><div class="stat-v" id="s-risk">—</div></div>
+  <div class="stat"><div class="stat-l">Lab baseline</div><div class="stat-v" id="s-rssi" style="color:#378ADD;font-size:13px;padding-top:3px">-21.6 dBm</div></div>
+</div>
+
+<!-- Map -->
+<div class="map-outer">
+  <canvas id="map" height="460"></canvas>
+  <div class="map-hint" id="map-hint">Setup mode — use the toolbar to place buildings and sensors</div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar" id="toolbar">
+  <span class="tb-lbl">Building:</span>
+  <div style="display:flex;gap:4px;flex-wrap:wrap" id="bldg-picker">
+    <button class="pk sel" data-btype="flat"     onclick="selB(this)">Flat lot</button>
+    <button class="pk"     data-btype="story1"   onclick="selB(this)">1-story</button>
+    <button class="pk"     data-btype="story3"   onclick="selB(this)">3-story</button>
+    <button class="pk"     data-btype="story5"   onclick="selB(this)">5-story</button>
+    <button class="pk"     data-btype="terrace"  onclick="selB(this)">Terrace</button>
+    <button class="pk"     data-btype="hospital" onclick="selB(this)">Hospital</button>
+  </div>
+  <button id="btn-pb" onclick="toggleTool('building')">+ Building</button>
+  <div class="tb-sep"></div>
+  <span class="tb-lbl">Sensor:</span>
+  <div style="display:flex;gap:4px;flex-wrap:wrap" id="sensor-picker">
+    <button class="pk sel" data-stype="environmental" data-icon="◈" data-color="#1D9E75" onclick="selS(this)">◈ Env</button>
+    <button class="pk"     data-stype="medical"       data-icon="♥" data-color="#E24B4A" onclick="selS(this)">♥ Medical</button>
+    <button class="pk"     data-stype="hub"           data-icon="▣" data-color="#378ADD" onclick="selS(this)">▣ Hub</button>
+    <button class="pk"     data-stype="automation"    data-icon="◉" data-color="#BA7517" onclick="selS(this)">◉ Auto</button>
+    <button class="pk"     data-stype="security"      data-icon="◆" data-color="#D85A30" onclick="selS(this)">◆ Security</button>
+    <button class="pk"     data-stype="traffic"       data-icon="◐" data-color="#7F77DD" onclick="selS(this)">◐ Traffic</button>
+    <button class="pk"     data-stype="gps"           data-icon="◎" data-color="#0F6E56" onclick="selS(this)">◎ GPS</button>
+  </div>
+  <button id="btn-ps" onclick="toggleTool('sensor')">+ Sensor</button>
+  <div class="tb-sep"></div>
+  <button onclick="showImport()">↓ Import</button>
+  <button onclick="saveLayout()" id="btn-save">💾 Save</button>
+  <button class="danger" onclick="showReset()">⚠ Reset</button>
+</div>
+
+<!-- Import panel -->
+<div class="edit-panel" id="import-panel" style="display:none">
+  <div class="ep-hdr">
+    <span class="ep-title">Import sensors from Lighthouse coordinates</span>
+    <button onclick="document.getElementById('import-panel').style.display='none'">✕</button>
+  </div>
+  <div style="font-size:11px;color:#666;margin-bottom:8px">One per line: <code>Label, type, x, y</code> — e.g. <code>Building B, environmental, -1.04, -1.04</code></div>
+  <textarea id="import-ta" placeholder="Building B, environmental, -1.04, -1.04&#10;Building C, medical, -1.04, 1.56&#10;Building A, hub, 1.09, 0.97&#10;Motion, security, 0.55, -1.22&#10;Building D, automation, 0.59, 0.86&#10;Door sensor, security, -0.92, 1.11"></textarea>
+  <div style="display:flex;gap:6px"><button class="primary" onclick="importCoords()">Import sensors</button><button onclick="document.getElementById('import-panel').style.display='none'">Cancel</button></div>
+  <div id="import-status" style="font-size:10px;color:#555;margin-top:6px"></div>
+</div>
+
+<!-- Sensor / Building edit panel -->
+<div class="edit-panel" id="edit-panel" style="display:none">
+  <div class="ep-hdr">
+    <span class="ep-title" id="ep-title">Edit sensor</span>
+    <div style="display:flex;gap:6px">
+      <button class="danger" onclick="deleteSel()">Delete</button>
+      <button onclick="deselect()">Done</button>
+    </div>
+  </div>
+
+  <!-- Building edit (simple) -->
+  <div id="bldg-edit" style="display:none">
+    <div class="ep-section">
+      <div class="ep-section-t">Building</div>
+      <div class="fr"><label>Label</label><input id="b-label" type="text" oninput="updateBldg()"></div>
+      <div class="fr"><label>Type</label>
+        <select id="b-type" onchange="updateBldg()">
+          <option value="flat">Flat lot</option>
+          <option value="story1">1-story (9in)</option>
+          <option value="story3">3-story (27in)</option>
+          <option value="story5">5-story (45in)</option>
+          <option value="terrace">Terrace (27in)</option>
+          <option value="hospital">Hospital (27in)</option>
+        </select>
+      </div>
+      <div class="fr"><label>Position X</label><input id="b-x" type="number" step="0.01" oninput="updateBldgPos()"><span class="unit">m</span></div>
+      <div class="fr"><label>Position Y</label><input id="b-y" type="number" step="0.01" oninput="updateBldgPos()"><span class="unit">m</span></div>
+    </div>
+  </div>
+
+  <!-- Sensor edit (full definition) -->
+  <div id="sensor-edit" style="display:none">
+    <div class="ep-body">
+      <!-- Left column: identity + MQTT -->
+      <div>
+        <div class="ep-section">
+          <div class="ep-section-t">Identity</div>
+          <div class="fr"><label>Label</label><input id="s-label" type="text" oninput="updateSensor()"></div>
+          <div class="fr"><label>Sensor description</label><input id="s-sensor" type="text" placeholder="e.g. DHT22 humidity" oninput="updateSensor()"></div>
+          <div class="fr"><label>Parent building</label>
+            <select id="s-building" onchange="updateSensor()">
+              <option value="">— None / Standalone —</option>
+            </select>
+          </div>
+          <div class="fr"><label>Type</label>
+            <select id="s-type" onchange="onTypeChange()">
+              <option value="environmental">Environmental</option>
+              <option value="medical">Medical</option>
+              <option value="hub">Hub / Camera</option>
+              <option value="automation">Automation</option>
+              <option value="security">Security</option>
+              <option value="traffic">Traffic</option>
+              <option value="gps">GPS</option>
+            </select>
+          </div>
+          <div class="fr"><label>Position X</label><input id="s-x" type="number" step="0.01" oninput="updateSensorPos()"><span class="unit">m</span></div>
+          <div class="fr"><label>Position Y</label><input id="s-y" type="number" step="0.01" oninput="updateSensorPos()"><span class="unit">m</span></div>
+        </div>
+
+        <div class="ep-section">
+          <div class="ep-section-t">MQTT & frequency</div>
+          <div class="fr"><label>MQTT topic ID</label><input id="s-mqtt" type="text" placeholder="auto-generated" oninput="updateSensor()"></div>
+          <div style="font-size:10px;color:#444;margin:-2px 0 6px 138px">Full topic: <code id="mqtt-preview">smartcity/…/metric</code></div>
+          <div class="fr"><label>RF frequency</label>
+            <select id="s-rf" onchange="updateSensor()">
+              <option value="2.4ghz">2.4 GHz Wi-Fi</option>
+              <option value="433mhz">433 MHz</option>
+              <option value="gps-l1">GPS L1 (1575 MHz)</option>
+              <option value="gps-l1l5">GPS L1 + L5</option>
+              <option value="5ghz">5 GHz Wi-Fi</option>
+            </select>
+          </div>
+          <div class="fr"><label>Publish interval</label><input id="s-interval" type="number" min="100" max="60000" step="100" value="1000" oninput="updateSensor()"><span class="unit">ms</span></div>
+        </div>
+      </div>
+
+      <!-- Right column: thresholds -->
+      <div>
+        <div class="ep-section">
+          <div class="ep-section-t">Monitoring thresholds <span style="font-weight:400;color:#444">(leave blank = use global default)</span></div>
+          <div class="thresh-note">Override global defaults for this sensor only</div>
+          <div id="thresh-fields"><!-- populated by type --></div>
+        </div>
+
+        <div class="ep-section">
+          <div class="ep-section-t">Metrics monitored</div>
+          <div id="metrics-list" style="font-size:11px;color:#666;line-height:2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Push to backend panel -->
+<div class="push-panel" id="push-panel">
+  <div class="push-t">Deploy layout to monitoring system</div>
+  <div class="push-row">
+    <div style="font-size:11px;color:#666;flex:1">Push your sensor definitions to the Node.js backend. The backend will hot-reload all node definitions, MQTT subscriptions, watchdog timers, and anomaly thresholds.</div>
+    <button class="primary" onclick="pushToBackend()">▶ Push to backend</button>
+    <button class="success" onclick="exportJSON()">↓ Export JSON</button>
+  </div>
+  <div class="push-status" id="push-status"></div>
+</div>
+
+<!-- Sim controls -->
+<div id="sim-wrap" style="display:none">
+  <div class="scen-row">
+    <span class="scen-lbl">Presets:</span>
+    <button onclick="setScenario('lab')">Lab conditions</button>
+    <button onclick="setScenario('center')">Center jammer</button>
+    <button onclick="setScenario('north')">North end</button>
+    <button onclick="setScenario('worst')">Worst case</button>
+  </div>
+  <div class="sim-grid">
+    <div class="ctrl">
+      <div class="ctrl-t">Environment & jammer</div>
+      <div class="env-row">
+        <button class="eb" onclick="setEnv('Suburban',2.8,this)">Suburban 2.8</button>
+        <button class="eb active" onclick="setEnv('Urban',3.5,this)">Urban 3.5</button>
+        <button class="eb" onclick="setEnv('Dense',4.0,this)">Dense 4.0</button>
+      </div>
+      <div class="sl"><label>Jammer TX power</label><input type="range" id="jtx" min="0" max="40" step="1" value="6" oninput="simUpdate()"><span class="v" id="jtx-v">6 dBm</span></div>
+      <div class="sl"><label>Amp gain (BT-100)</label><input type="range" id="jgain" min="0" max="20" step="1" value="11" oninput="simUpdate()"><span class="v" id="jgain-v">11 dB</span></div>
+      <div class="sl"><label>Router TX power</label><input type="range" id="rtx" min="10" max="30" step="1" value="20" oninput="simUpdate()"><span class="v" id="rtx-v">20 dBm</span></div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-t">Lab calibration (bladeRF test)</div>
+      <div class="sl"><label>Lab D_signal</label><input type="range" id="dsig" min="0.5" max="10" step="0.1" value="3" oninput="simUpdate()"><span class="v" id="dsig-v">3.0 m</span></div>
+      <div class="sl"><label>Lab D_jammer</label><input type="range" id="djam" min="0.5" max="10" step="0.1" value="2" oninput="simUpdate()"><span class="v" id="djam-v">2.0 m</span></div>
+      <div class="sl"><label>Lab loss observed</label><input type="range" id="lloss" min="0" max="100" step="1" value="10" oninput="simUpdate()"><span class="v" id="lloss-v">10%</span></div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-t">Load test data</div>
+      <div style="font-size:11px;color:#666;margin-bottom:6px">Avg RSSI from bladeRF test or paste API JSON</div>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input type="text" id="rssi-in" placeholder="-21.6" style="flex:1;font-size:11px;font-family:inherit;padding:4px 8px;border:0.5px solid #2e2e30;border-radius:6px;background:#0e0e10;color:#e8e8e6;outline:none">
+        <button onclick="applyRSSI()">Apply</button>
+      </div>
+      <textarea id="api-json" style="min-height:40px" placeholder='Paste JSON from /api/nodes/.../history'></textarea>
+      <button onclick="parseJSON()" style="width:100%;margin-top:2px">Parse JSON</button>
+    </div>
+  </div>
+</div>
+
+<!-- Node panel -->
+<div class="node-panel">
+  <div class="np-t" id="np-title">Layout</div>
+  <div class="ng" id="node-grid"></div>
+  <div id="detail-panel" style="display:none" class="dp"></div>
+</div>
+
+<!-- Confirm overlay -->
+<div class="overlay" id="overlay">
+  <div class="confirm-box">
+    <h3>Reset layout</h3>
+    <p>This will delete all buildings and sensors. Road layout stays. Cannot be undone.</p>
+    <div class="confirm-btns">
+      <button style="background:#2e0a0a;color:#E24B4A;border-color:#A32D2D" onclick="confirmReset()">Yes, reset</button>
+      <button onclick="document.getElementById('overlay').classList.remove('show')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Canvas ───────────────────────────────────────────────────────────────────
+const CW=720,CH=460;
+const canvas=document.getElementById("map");
+canvas.width=CW;
+const ctx=canvas.getContext("2d");
+const SC=85,OX=CW*0.50,OY=CH*0.52;
+
+function mp(mx,my){return{x:OX+mx*SC,y:OY-my*SC};}
+function pm(px,py){return{x:+((px-OX)/SC).toFixed(2),y:+(-(py-OY)/SC).toFixed(2)};}
+function d2(ax,ay,bx,by){return Math.sqrt((ax-bx)**2+(ay-by)**2);}
+
+// ─── Definitions ──────────────────────────────────────────────────────────────
+const BLDG_DEFS={
+  flat:    {label:"Flat lot",  h:0,  fill:"#1e1e20",stroke:"#333",   lc:"#555"},
+  story1:  {label:"1-story",  h:9,  fill:"#1e2022",stroke:"#3a3a3e",lc:"#666"},
+  story3:  {label:"3-story",  h:27, fill:"#1c1e24",stroke:"#3a3e4a",lc:"#7788aa"},
+  story5:  {label:"5-story",  h:45, fill:"#181820",stroke:"#3a3855",lc:"#9988cc"},
+  terrace: {label:"Terrace",  h:27, fill:"#1e241e",stroke:"#3a4a3a",lc:"#668866"},
+  hospital:{label:"Hospital", h:27, fill:"#241e1e",stroke:"#4a3838",lc:"#aa7777"},
+};
+
+const SENSOR_DEFS={
+  environmental:{icon:"◈",color:"#1D9E75",metrics:["temperature","humidity","wifi_rssi"],rf:"2.4ghz",interval:1000},
+  medical:      {icon:"♥",color:"#E24B4A",metrics:["heart_rate","spo2","wifi_rssi"],rf:"2.4ghz",interval:1000},
+  hub:          {icon:"▣",color:"#378ADD",metrics:["video_fps","audio_db","wifi_rssi"],rf:"2.4ghz",interval:1000},
+  automation:   {icon:"◉",color:"#BA7517",metrics:["plug_state","wifi_rssi"],rf:"2.4ghz",interval:1000},
+  security:     {icon:"◆",color:"#D85A30",metrics:["motion_detected","door_open","signal_433"],rf:"433mhz",interval:500},
+  traffic:      {icon:"◐",color:"#7F77DD",metrics:["light_state","wifi_rssi"],rf:"2.4ghz",interval:1000},
+  gps:          {icon:"◎",color:"#0F6E56",metrics:["satellites","snr_l1","snr_l5","lock_status","lat","lng"],rf:"gps-l1l5",interval:1000},
+};
+
+// Default thresholds per type
+const DEFAULT_THRESHOLDS={
+  environmental:{wifi_rssi:-85,rssi_jump:15,temp_min:-10,temp_max:60,temp_jump:5,humidity_min:10,humidity_max:95},
+  medical:      {wifi_rssi:-85,rssi_jump:15,heart_rate_min:40,heart_rate_max:120,spo2_min:94},
+  hub:          {wifi_rssi:-85,rssi_jump:15,video_fps_min:15,audio_db_min:20},
+  automation:   {wifi_rssi:-85,rssi_jump:15},
+  security:     {signal_433:-80,rssi_jump:15},
+  traffic:      {wifi_rssi:-85,rssi_jump:15},
+  gps:          {snr_l1:25,snr_l5:25,sat_drop:4},
+};
+
+// Threshold field definitions per type
+const THRESH_FIELDS={
+  environmental:[
+    {key:"wifi_rssi",     label:"WiFi RSSI alert",    unit:"dBm", placeholder:"-85"},
+    {key:"rssi_jump",     label:"RSSI sudden drop",   unit:"dB",  placeholder:"15"},
+    {key:"temp_min",      label:"Temp minimum",       unit:"°C",  placeholder:"-10"},
+    {key:"temp_max",      label:"Temp maximum",       unit:"°C",  placeholder:"60"},
+    {key:"temp_jump",     label:"Temp spike alert",   unit:"°C",  placeholder:"5"},
+    {key:"humidity_min",  label:"Humidity minimum",   unit:"%",   placeholder:"10"},
+    {key:"humidity_max",  label:"Humidity maximum",   unit:"%",   placeholder:"95"},
+  ],
+  medical:[
+    {key:"wifi_rssi",       label:"WiFi RSSI alert",    unit:"dBm", placeholder:"-85"},
+    {key:"rssi_jump",       label:"RSSI sudden drop",   unit:"dB",  placeholder:"15"},
+    {key:"heart_rate_min",  label:"Heart rate min",     unit:"bpm", placeholder:"40"},
+    {key:"heart_rate_max",  label:"Heart rate max",     unit:"bpm", placeholder:"120"},
+    {key:"spo2_min",        label:"SpO2 minimum",       unit:"%",   placeholder:"94"},
+  ],
+  hub:[
+    {key:"wifi_rssi",    label:"WiFi RSSI alert",    unit:"dBm", placeholder:"-85"},
+    {key:"rssi_jump",    label:"RSSI sudden drop",   unit:"dB",  placeholder:"15"},
+    {key:"video_fps_min",label:"Min video FPS",      unit:"fps", placeholder:"15"},
+    {key:"audio_db_min", label:"Min audio level",    unit:"dB",  placeholder:"20"},
+  ],
+  automation:[
+    {key:"wifi_rssi",  label:"WiFi RSSI alert",  unit:"dBm",placeholder:"-85"},
+    {key:"rssi_jump",  label:"RSSI sudden drop",  unit:"dB", placeholder:"15"},
+  ],
+  security:[
+    {key:"signal_433", label:"433 MHz signal",    unit:"dBm",placeholder:"-80"},
+    {key:"rssi_jump",  label:"Signal sudden drop", unit:"dB", placeholder:"15"},
+  ],
+  traffic:[
+    {key:"wifi_rssi",  label:"WiFi RSSI alert",  unit:"dBm",placeholder:"-85"},
+    {key:"rssi_jump",  label:"RSSI sudden drop",  unit:"dB", placeholder:"15"},
+  ],
+  gps:[
+    {key:"snr_l1",   label:"SNR L1 minimum",      unit:"dB-Hz",placeholder:"25"},
+    {key:"snr_l5",   label:"SNR L5 minimum",      unit:"dB-Hz",placeholder:"25"},
+    {key:"sat_drop", label:"Satellite drop alert", unit:"sats", placeholder:"4"},
+  ],
+};
+
+// Snap zones
+const SNAP_ZONES=[
+  {id:"z1",mx:-0.90,my: 0.70,label:"Block NW"},
+  {id:"z2",mx: 0.90,my: 0.70,label:"Block NE"},
+  {id:"z3",mx:-0.90,my:-0.70,label:"Block SW"},
+  {id:"z4",mx: 0.90,my:-0.70,label:"Block SE"},
+  {id:"z5",mx:-0.90,my: 1.85,label:"Block N-Left"},
+  {id:"z6",mx: 0.90,my: 1.85,label:"Block N-Right"},
+  {id:"z7",mx:-0.90,my:-1.85,label:"Block S-Left"},
+  {id:"z8",mx: 0.90,my:-1.85,label:"Block S-Right"},
+];
+
+const ROW_Y=[1.40,0,-1.40];
+const RW=1.524,RH=0.229,CX=0.279;
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let mode="setup";
+let activeTool=null;
+let activeBldgType="flat";
+let activeSensorType="environmental";
+let buildings=[];
+let sensors=[];
+let router={mx:0,my:-1.92};
+let jammer={mx:0.5,my:0.5};
+let selId=null,selKind=null;
+let drag=null,dragOff={x:0,y:0};
+let shiftHeld=false;
+let n=3.5,labLoss=10,labRSSI=-21.6;
+let idCount=0;
+let pulseT=0,pulseActive=false,pulseTimer=null,rafId=null;
+const API_BASE="http://localhost:3001";
+const SK="smartcity_mapper_v3";
+
+// ─── Persistence ──────────────────────────────────────────────────────────────
+function save(){
+  try{localStorage.setItem(SK,JSON.stringify({buildings,sensors,router,jammer,idCount,labRSSI,labLoss}));}catch(e){}
+}
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem(SK)||"{}");
+    if(d.buildings)buildings=d.buildings;
+    if(d.sensors)sensors=d.sensors;
+    if(d.router)router=d.router;
+    if(d.jammer)jammer=d.jammer;
+    if(d.idCount)idCount=d.idCount;
+    if(d.labRSSI!=null){labRSSI=d.labRSSI;document.getElementById("s-rssi").textContent=labRSSI+" dBm";}
+    if(d.labLoss!=null)labLoss=d.labLoss;
+  }catch(e){}
+}
+function saveLayout(){
+  save();
+  const b=document.getElementById("btn-save");
+  b.textContent="✓ Saved";b.style.color="#1D9E75";
+  setTimeout(()=>{b.textContent="💾 Save";b.style.color="";},1500);
+}
+
+// ─── Layout export ────────────────────────────────────────────────────────────
+function buildLayoutPayload(){
+  return{
+    version:"1.0",
+    exportedAt:new Date().toISOString(),
+    router,
+    buildings,
+    sensors:sensors.map(s=>{
+      const def=SENSOR_DEFS[s.stype]||SENSOR_DEFS.environmental;
+      const defaults=DEFAULT_THRESHOLDS[s.stype]||{};
+      return{
+        id:s.mqttId||toId(s.label),
+        label:s.label,
+        // Explicit parent building — set by user in edit panel
+        building:     s.buildingLabel||null,
+        buildingId:   s.buildingId||null,
+        buildingType: s.buildingType||null,
+        type:s.stype,
+        sensor:s.sensor||"",
+        mqttTopic:`smartcity/${s.mqttId||toId(s.label)}`,
+        rfFrequency:s.rfFrequency||def.rf,
+        publishIntervalMs:s.publishIntervalMs||def.interval,
+        metrics:def.metrics,
+        position:{mx:s.mx,my:s.my},
+        thresholds:{...defaults,...(s.thresholds||{})},
+      };
+    }),
+  };
+}
+
+async function pushToBackend(){
+  const payload=buildLayoutPayload();
+  const status=document.getElementById("push-status");
+  status.textContent="Pushing to backend...";
+  status.className="push-status";
+  try{
+    const res=await fetch(`${API_BASE}/api/layout`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload),
+    });
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    status.textContent=`✓ Successfully pushed ${payload.sensors.length} sensors to backend at ${new Date().toLocaleTimeString()}`;
+    status.className="push-status ok";
+    document.getElementById("sync-badge").style.display="inline-block";
+    setTimeout(()=>document.getElementById("sync-badge").style.display="none",5000);
+  }catch(e){
+    status.textContent=`✗ Push failed: ${e.message} — is the backend running at ${API_BASE}?`;
+    status.className="push-status err";
+  }
+}
+
+function exportJSON(){
+  const payload=buildLayoutPayload();
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`smartcity-layout-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function toId(label){
+  return label.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+}
+
+// ─── Mode ─────────────────────────────────────────────────────────────────────
+function setMode(m){
+  mode=m;activeTool=null;selId=null;selKind=null;
+  document.getElementById("btn-setup").classList.toggle("active",m==="setup");
+  document.getElementById("btn-sim").classList.toggle("active",m==="sim");
+  document.getElementById("toolbar").style.display=m==="setup"?"flex":"none";
+  document.getElementById("edit-panel").style.display="none";
+  document.getElementById("import-panel").style.display="none";
+  document.getElementById("sim-wrap").style.display=m==="sim"?"block":"none";
+  document.getElementById("mode-lbl").textContent=m==="setup"
+    ?"Setup — place buildings and sensors, define MQTT topics and monitoring thresholds"
+    :"Simulate — drag J (jammer) for live J/S analysis · click sensors for deep dive";
+  document.getElementById("map-hint").textContent=m==="setup"
+    ?"Click + Building or + Sensor, then click the map · Shift+click = free placement · click items to configure"
+    :"Drag J (jammer) anywhere · click sensor for deep dive · router (R) also draggable";
+  document.getElementById("np-title").textContent=m==="setup"?"Layout — click to configure":"Sensors — click for analysis";
+  document.getElementById("detail-panel").style.display="none";
+  canvas.style.cursor=m==="setup"?"default":"crosshair";
+  if(m==="sim")save();
+  draw();renderGrid();
+}
+
+// ─── Tools ────────────────────────────────────────────────────────────────────
+function toggleTool(t){
+  activeTool=activeTool===t?null:t;
+  document.getElementById("btn-pb").className=activeTool==="building"?"active-tool":"";
+  document.getElementById("btn-ps").className=activeTool==="sensor"?"active-tool":"";
+  canvas.style.cursor=activeTool?"crosshair":"default";
+  draw();
+}
+
+function selB(btn){
+  document.querySelectorAll("#bldg-picker .pk").forEach(b=>{b.classList.remove("sel");b.style.borderColor="";b.style.color="";});
+  btn.classList.add("sel");btn.style.borderColor="#BA7517";btn.style.color="#BA7517";
+  activeBldgType=btn.dataset.btype;
+}
+
+function selS(btn){
+  document.querySelectorAll("#sensor-picker .pk").forEach(b=>{b.classList.remove("sel");b.style.borderColor="";b.style.color="";});
+  btn.classList.add("sel");btn.style.borderColor=btn.dataset.color;btn.style.color=btn.dataset.color;
+  activeSensorType=btn.dataset.stype;
+}
+
+// ─── Snap ─────────────────────────────────────────────────────────────────────
+function snapOrFree(mx,my){
+  if(shiftHeld)return{mx,my};
+  let best=null,bestD=0.5;
+  SNAP_ZONES.forEach(z=>{const dd=d2(mx,my,z.mx,z.my);if(dd<bestD){bestD=dd;best=z;}});
+  return best?{mx:best.mx,my:best.my}:{mx,my};
+}
+
+// ─── Place ────────────────────────────────────────────────────────────────────
+function placeBuilding(mx,my){
+  const pos=snapOrFree(mx,my);
+  idCount++;
+  const def=BLDG_DEFS[activeBldgType];
+  buildings.push({id:"b"+idCount,btype:activeBldgType,label:def.label+" "+idCount,mx:pos.mx,my:pos.my,w:0.45,h:0.35});
+  save();update();selectItem("b"+idCount,"building");
+}
+
+function placeSensor(mx,my){
+  idCount++;
+  const def=SENSOR_DEFS[activeSensorType];
+  const label=def.icon+" Sensor "+idCount;
+  const mqttId=toId("sensor-"+idCount);
+  sensors.push({
+    id:"s"+idCount,stype:activeSensorType,label,sensor:"",
+    mqttId,rfFrequency:def.rf,publishIntervalMs:def.interval,
+    mx,my,thresholds:{}
+  });
+  save();update();selectItem("s"+idCount,"sensor");
+}
+
+// ─── Selection ────────────────────────────────────────────────────────────────
+function selectItem(id,kind){
+  selId=id;selKind=kind;
+  const ep=document.getElementById("edit-panel");
+  if(mode!=="setup"){ep.style.display="none";
+    if(kind==="sensor"){const s=sensors.find(x=>x.id===id);if(s){document.getElementById("detail-panel").style.display="block";renderDetail(s);}}
+    draw();renderGrid();return;
+  }
+  ep.style.display="block";
+  document.getElementById("bldg-edit").style.display=kind==="building"?"block":"none";
+  document.getElementById("sensor-edit").style.display=kind==="sensor"?"block":"none";
+  document.getElementById("ep-title").textContent=kind==="building"?"Edit building":"Configure sensor";
+
+  if(kind==="building"){
+    const b=buildings.find(x=>x.id===id);if(!b)return;
+    document.getElementById("b-label").value=b.label;
+    document.getElementById("b-type").value=b.btype;
+    document.getElementById("b-x").value=b.mx;
+    document.getElementById("b-y").value=b.my;
+  } else {
+    const s=sensors.find(x=>x.id===id);if(!s)return;
+    document.getElementById("s-label").value=s.label;
+    document.getElementById("s-sensor").value=s.sensor||"";
+    populateBuildingDropdown(s.buildingId||"");
+    document.getElementById("s-type").value=s.stype;
+    document.getElementById("s-mqtt").value=s.mqttId||toId(s.label);
+    document.getElementById("s-rf").value=s.rfFrequency||SENSOR_DEFS[s.stype].rf;
+    document.getElementById("s-interval").value=s.publishIntervalMs||1000;
+    document.getElementById("s-x").value=s.mx;
+    document.getElementById("s-y").value=s.my;
+    renderThresholds(s);
+    renderMetricsList(s.stype);
+    updateMqttPreview();
+  }
+  draw();renderGrid();
+}
+
+function renderThresholds(s){
+  const fields=THRESH_FIELDS[s.stype]||[];
+  const defaults=DEFAULT_THRESHOLDS[s.stype]||{};
+  const tf=document.getElementById("thresh-fields");
+  tf.innerHTML=fields.map(f=>`
+    <div class="fr">
+      <label>${f.label}</label>
+      <input type="number" step="0.1"
+        id="th-${f.key}"
+        placeholder="${defaults[f.key]!==undefined?defaults[f.key]+" (default)":f.placeholder}"
+        value="${s.thresholds&&s.thresholds[f.key]!==undefined?s.thresholds[f.key]:""}"
+        oninput="updateThreshold('${f.key}')">
+      <span class="unit">${f.unit}</span>
+    </div>`).join("");
+}
+
+function renderMetricsList(type){
+  const def=SENSOR_DEFS[type]||SENSOR_DEFS.environmental;
+  const ml=document.getElementById("metrics-list");
+  ml.innerHTML=def.metrics.map(m=>`
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="color:#1D9E75;font-size:10px">●</span>
+      <code>${def.metrics[0]===m?`smartcity/${document.getElementById("s-mqtt").value||"…"}/${m}`:`…/${m}`}</code>
+    </div>`).join("");
+}
+
+function updateMqttPreview(){
+  const id=document.getElementById("s-mqtt").value||"…";
+  document.getElementById("mqtt-preview").textContent=`smartcity/${id}/metric`;
+  renderMetricsList(document.getElementById("s-type").value);
+}
+
+function onTypeChange(){
+  const s=sensors.find(x=>x.id===selId);if(!s)return;
+  s.stype=document.getElementById("s-type").value;
+  const def=SENSOR_DEFS[s.stype];
+  document.getElementById("s-rf").value=s.rfFrequency||def.rf;
+  document.getElementById("s-interval").value=s.publishIntervalMs||def.interval;
+  renderThresholds(s);renderMetricsList(s.stype);
+  updateSensor();
+}
+
+function updateThreshold(key){
+  const s=sensors.find(x=>x.id===selId);if(!s)return;
+  if(!s.thresholds)s.thresholds={};
+  const val=document.getElementById("th-"+key).value;
+  if(val==="")delete s.thresholds[key];
+  else s.thresholds[key]=parseFloat(val);
+  save();
+}
+
+function updateBldg(){
+  const b=buildings.find(x=>x.id===selId);if(!b)return;
+  b.label=document.getElementById("b-label").value;
+  b.btype=document.getElementById("b-type").value;
+  save();draw();renderGrid();
+}
+function updateBldgPos(){
+  const b=buildings.find(x=>x.id===selId);if(!b)return;
+  const x=parseFloat(document.getElementById("b-x").value);
+  const y=parseFloat(document.getElementById("b-y").value);
+  if(!isNaN(x))b.mx=x;if(!isNaN(y))b.my=y;
+  save();draw();
+}
+
+function populateBuildingDropdown(currentBuildingId){
+  const sel=document.getElementById("s-building");
+  sel.innerHTML='<option value="">— None / Standalone —</option>';
+  buildings.forEach(b=>{
+    const opt=document.createElement("option");
+    opt.value=b.id;
+    opt.textContent=`${b.label} (${BLDG_DEFS[b.btype]?.label||b.btype})`;
+    if(b.id===currentBuildingId)opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+
+function updateSensor(){
+  const s=sensors.find(x=>x.id===selId);if(!s)return;
+  s.label=document.getElementById("s-label").value;
+  s.sensor=document.getElementById("s-sensor").value;
+  // Parent building — explicit assignment
+  const buildingSel=document.getElementById("s-building").value;
+  const parentBuilding=buildings.find(b=>b.id===buildingSel);
+  s.buildingId=parentBuilding?parentBuilding.id:null;
+  s.buildingLabel=parentBuilding?parentBuilding.label:null;
+  s.buildingType=parentBuilding?parentBuilding.btype:null;
+  s.stype=document.getElementById("s-type").value;
+  s.mqttId=document.getElementById("s-mqtt").value||toId(s.label);
+  s.rfFrequency=document.getElementById("s-rf").value;
+  s.publishIntervalMs=parseInt(document.getElementById("s-interval").value)||1000;
+  updateMqttPreview();
+  save();draw();renderGrid();
+}
+function updateSensorPos(){
+  const s=sensors.find(x=>x.id===selId);if(!s)return;
+  const x=parseFloat(document.getElementById("s-x").value);
+  const y=parseFloat(document.getElementById("s-y").value);
+  if(!isNaN(x))s.mx=x;if(!isNaN(y))s.my=y;
+  save();draw();
+}
+
+function deselect(){selId=null;selKind=null;document.getElementById("edit-panel").style.display="none";draw();renderGrid();}
+
+function deleteSel(){
+  if(selKind==="building")buildings=buildings.filter(b=>b.id!==selId);
+  else sensors=sensors.filter(s=>s.id!==selId);
+  selId=null;selKind=null;
+  document.getElementById("edit-panel").style.display="none";
+  save();update();
+}
+
+// ─── Import ───────────────────────────────────────────────────────────────────
+function showImport(){
+  const p=document.getElementById("import-panel");
+  p.style.display=p.style.display==="none"?"block":"none";
+}
+function importCoords(){
+  const lines=document.getElementById("import-ta").value.trim().split("\n");
+  let count=0;
+  lines.forEach(line=>{
+    const parts=line.split(",").map(s=>s.trim());
+    if(parts.length<4)return;
+    const[lbl,type,xs,ys]=parts;
+    const mx=parseFloat(xs),my=parseFloat(ys);
+    if(isNaN(mx)||isNaN(my))return;
+    const vtype=SENSOR_DEFS[type.toLowerCase()]?type.toLowerCase():"environmental";
+    const def=SENSOR_DEFS[vtype];
+    idCount++;
+    sensors.push({
+      id:"s"+idCount,stype:vtype,label:lbl,sensor:"",
+      mqttId:toId(lbl),rfFrequency:def.rf,publishIntervalMs:def.interval,
+      mx,my,thresholds:{}
+    });
+    count++;
+  });
+  document.getElementById("import-status").textContent=`Imported ${count} sensor${count!==1?"s":""}.`;
+  document.getElementById("import-status").style.color="#1D9E75";
+  save();update();
+}
+
+// ─── Reset ────────────────────────────────────────────────────────────────────
+function showReset(){document.getElementById("overlay").classList.add("show");}
+function confirmReset(){
+  buildings=[];sensors=[];selId=null;selKind=null;idCount=0;
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("edit-panel").style.display="none";
+  save();update();
+}
+
+// ─── Simulation math ──────────────────────────────────────────────────────────
+function jsR(dSig,dJam){
+  const jtx=+document.getElementById("jtx").value;
+  const jg=+document.getElementById("jgain").value;
+  const rtx=+document.getElementById("rtx").value;
+  return (jtx+jg-rtx)+10*n*Math.log10(Math.max(0.05,dSig)/Math.max(0.05,dJam));
+}
+function predLoss(js){
+  const ds=+document.getElementById("dsig").value;
+  const dj=+document.getElementById("djam").value;
+  return Math.min(100,Math.max(0,Math.round(labLoss+(js-jsR(ds,dj))*2.5)));
+}
+function rxP(tx,gain,dm){
+  const fspl=20*Math.log10(Math.max(0.1,dm))+20*Math.log10(2437e6)+20*Math.log10(4*Math.PI/3e8);
+  return +(tx+gain-fspl).toFixed(1);
+}
+function lCol(loss){return loss<20?"#1D9E75":loss<50?"#BA7517":"#E24B4A";}
+function getSData(s){
+  const dSig=+d2(s.mx,s.my,router.mx,router.my).toFixed(2);
+  const dJam=+d2(s.mx,s.my,jammer.mx,jammer.my).toFixed(2);
+  const js=+jsR(Math.max(0.1,dSig),Math.max(0.05,dJam)).toFixed(1);
+  const loss=predLoss(js);
+  const jtx=+document.getElementById("jtx").value;
+  const jg=+document.getElementById("jgain").value;
+  const rtx=+document.getElementById("rtx").value;
+  return{dSig,dJam,js,loss,sigDbm:rxP(rtx,0,Math.max(0.1,dSig)),jamDbm:rxP(jtx,jg,Math.max(0.05,dJam))};
+}
+
+// ─── Pulse ────────────────────────────────────────────────────────────────────
+function triggerPulse(){
+  if(pulseActive)return;pulseActive=true;pulseT=0;
+  clearTimeout(pulseTimer);pulseTimer=setTimeout(()=>{pulseActive=false;},2500);
+  cancelAnimationFrame(rafId);pulseTick();
+}
+function pulseTick(){
+  if(!pulseActive)return;pulseT=Math.min(1,pulseT+0.03);draw();
+  if(pulseT<1)rafId=requestAnimationFrame(pulseTick);else pulseActive=false;
+}
+
+// ─── Draw ─────────────────────────────────────────────────────────────────────
+function draw(){
+  ctx.clearRect(0,0,CW,CH);
+  ctx.fillStyle="#0c0c0e";ctx.fillRect(0,0,CW,CH);
+
+  // Grid
+  ctx.strokeStyle="rgba(255,255,255,0.025)";ctx.lineWidth=0.5;
+  for(let x=0;x<CW;x+=SC/4){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,CH);ctx.stroke();}
+  for(let y=0;y<CH;y+=SC/4){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(CW,y);ctx.stroke();}
+  ctx.strokeStyle="rgba(255,255,255,0.05)";
+  for(let m=-5;m<=5;m++){
+    const px=OX+m*SC,py=OY-m*SC;
+    ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,CH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(CW,py);ctx.stroke();
+  }
+  ctx.strokeStyle="rgba(255,255,255,0.08)";ctx.lineWidth=1;ctx.setLineDash([4,6]);
+  ctx.beginPath();ctx.moveTo(OX,0);ctx.lineTo(OX,CH);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,OY);ctx.lineTo(CW,OY);ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle="#333";ctx.font="9px monospace";ctx.textAlign="center";
+  ctx.fillText("+Y",OX,11);ctx.fillText("-Y",OX,CH-4);
+  ctx.textAlign="right";ctx.fillText("+X →",CW-3,OY-4);
+  ctx.textAlign="left";ctx.fillText("← -X",3,OY-4);
+
+  // Scale bar
+  const sb=mp(-3.2,-2.1),sb2=mp(-2.2,-2.1);
+  ctx.strokeStyle="#333";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(sb.x,sb.y);ctx.lineTo(sb2.x,sb2.y);ctx.stroke();
+  ctx.fillStyle="#444";ctx.font="8px monospace";ctx.textAlign="center";
+  ctx.fillText("1 m",((sb.x+sb2.x)/2),sb.y-4);
+
+  // Roads
+  ROW_Y.forEach(ry=>{
+    const tl=mp(-RW,ry+RH),br=mp(RW,ry-RH);
+    ctx.fillStyle="#1c1c1f";ctx.fillRect(tl.x,tl.y,br.x-tl.x,br.y-tl.y);
+    ctx.strokeStyle="rgba(255,255,255,0.03)";ctx.lineWidth=0.5;ctx.strokeRect(tl.x,tl.y,br.x-tl.x,br.y-tl.y);
+    ctx.strokeStyle="rgba(255,255,255,0.04)";ctx.setLineDash([8,8]);
+    const c=mp(-RW,ry),c2=mp(RW,ry);
+    ctx.beginPath();ctx.moveTo(c.x,c.y);ctx.lineTo(c2.x,c2.y);ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  const vtl=mp(-CX,2.2),vbr=mp(CX,-2.2);
+  ctx.fillStyle="#1c1c1f";ctx.fillRect(vtl.x,vtl.y,vbr.x-vtl.x,vbr.y-vtl.y);
+  ctx.strokeStyle="rgba(255,255,255,0.03)";ctx.lineWidth=0.5;ctx.strokeRect(vtl.x,vtl.y,vbr.x-vtl.x,vbr.y-vtl.y);
+
+  // Traffic light pucks
+  [{mx:-0.32,my:-0.32},{mx:0.30,my:-0.32},{mx:-0.32,my:0.32},{mx:0.30,my:0.32}].forEach(t=>{
+    const p=mp(t.mx,t.my);
+    ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);
+    ctx.fillStyle="#252528";ctx.fill();
+    ctx.strokeStyle="#7F77DD";ctx.lineWidth=1;ctx.stroke();
+  });
+  ctx.fillStyle="#7F77DD";ctx.font="7px monospace";ctx.textAlign="center";ctx.globalAlpha=0.4;
+  ctx.fillText("intersection",OX,OY-SC*0.28);ctx.globalAlpha=1;
+
+  // Snap zones (setup + building tool)
+  if(mode==="setup"&&activeTool==="building"){
+    SNAP_ZONES.forEach(z=>{
+      const p=mp(z.mx,z.my);
+      ctx.beginPath();ctx.arc(p.x,p.y,SC*0.28,0,Math.PI*2);
+      ctx.fillStyle="rgba(186,119,23,0.08)";ctx.fill();
+      ctx.strokeStyle="#BA7517";ctx.lineWidth=0.5;ctx.setLineDash([2,3]);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle="#BA7517";ctx.font="7px monospace";ctx.textAlign="center";ctx.globalAlpha=0.35;
+      ctx.fillText(z.label,p.x,p.y+SC*0.28+10);ctx.globalAlpha=1;
+    });
+  }
+
+  // Buildings
+  buildings.forEach(b=>{
+    const def=BLDG_DEFS[b.btype]||BLDG_DEFS.story3;
+    const isSel=selId===b.id;
+    const tl=mp(b.mx-b.w/2,b.my+b.h/2),br=mp(b.mx+b.w/2,b.my-b.h/2);
+    const bw=br.x-tl.x,bh=br.y-tl.y;
+    ctx.fillStyle=def.fill;ctx.fillRect(tl.x,tl.y,bw,bh);
+    ctx.strokeStyle=isSel?"#BA7517":def.stroke;ctx.lineWidth=isSel?1.5:0.5;ctx.strokeRect(tl.x,tl.y,bw,bh);
+    if(isSel){ctx.setLineDash([2,3]);ctx.strokeStyle="#BA7517";ctx.lineWidth=0.5;ctx.strokeRect(tl.x-3,tl.y-3,bw+6,bh+6);ctx.setLineDash([]);}
+    ctx.fillStyle=def.lc;ctx.font="500 8px sans-serif";ctx.textAlign="center";
+    ctx.fillText(b.label,tl.x+bw/2,tl.y+bh/2+3);
+    if(def.h>0){ctx.fillStyle="#333";ctx.font="7px monospace";ctx.fillText(def.h+"in",tl.x+bw/2,tl.y+bh/2+13);}
+  });
+
+  // Jammer rings (sim)
+  if(mode==="sim"){
+    const jp=mp(jammer.mx,jammer.my);
+    const critR=0.5*SC,warnR=1.0*SC,safeR=1.8*SC;
+    if(pulseActive){
+      const pr=critR+(safeR-critR)*pulseT;
+      ctx.beginPath();ctx.arc(jp.x,jp.y,pr,0,Math.PI*2);
+      ctx.strokeStyle="#E24B4A";ctx.lineWidth=2;ctx.globalAlpha=(1-pulseT)*0.6;ctx.stroke();ctx.globalAlpha=1;
+    }
+    [[safeR,"#1D9E75",0.04],[warnR,"#BA7517",0.07],[critR,"#E24B4A",0.12]].forEach(([r,c,a])=>{
+      ctx.beginPath();ctx.arc(jp.x,jp.y,r,0,Math.PI*2);
+      ctx.fillStyle=c;ctx.globalAlpha=a;ctx.fill();ctx.globalAlpha=1;
+      ctx.strokeStyle=c;ctx.lineWidth=0.5;ctx.globalAlpha=0.4;ctx.stroke();ctx.globalAlpha=1;
+    });
+    ctx.fillStyle="#E24B4A";ctx.font="7px monospace";ctx.textAlign="center";ctx.globalAlpha=0.35;
+    ctx.fillText("0.5m",jp.x,jp.y-critR-4);ctx.fillText("1.0m",jp.x,jp.y-warnR-4);ctx.globalAlpha=1;
+  }
+
+  // Connection lines (sim)
+  if(mode==="sim"){
+    const rp=mp(router.mx,router.my),jp=mp(jammer.mx,jammer.my);
+    sensors.forEach(s=>{
+      const{loss}=getSData(s);const col=lCol(loss);
+      const np=mp(s.mx,s.my);
+      ctx.setLineDash([3,5]);ctx.globalAlpha=0.15;
+      ctx.strokeStyle=col;ctx.lineWidth=0.5;
+      ctx.beginPath();ctx.moveTo(np.x,np.y);ctx.lineTo(rp.x,rp.y);ctx.stroke();
+      ctx.strokeStyle="#E24B4A";
+      ctx.beginPath();ctx.moveTo(np.x,np.y);ctx.lineTo(jp.x,jp.y);ctx.stroke();
+      ctx.globalAlpha=1;ctx.setLineDash([]);
+    });
+  }
+
+  // Sensors
+  sensors.forEach(s=>{
+    const def=SENSOR_DEFS[s.stype]||SENSOR_DEFS.environmental;
+    const np=mp(s.mx,s.my);
+    const isSel=selId===s.id;
+    let col=def.color;
+    const r=isSel?12:9;
+    const isConfigured=s.sensor&&s.mqttId;
+
+    if(mode==="sim"){
+      const{js,loss}=getSData(s);col=lCol(loss);
+      ctx.fillStyle=col;ctx.font="7px monospace";ctx.textAlign="center";
+      ctx.fillText((js>=0?"+":"")+js.toFixed(1)+"dB",np.x,np.y+28);
+    }
+
+    ctx.beginPath();ctx.arc(np.x,np.y,r,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.globalAlpha=0.2;ctx.fill();ctx.globalAlpha=1;
+    ctx.strokeStyle=col;ctx.lineWidth=isSel?2:1.5;ctx.stroke();
+
+    // Config indicator dot
+    if(mode==="setup"&&isConfigured){
+      ctx.beginPath();ctx.arc(np.x+r-2,np.y-r+2,3,0,Math.PI*2);
+      ctx.fillStyle="#1D9E75";ctx.fill();
+    }
+
+    if(isSel){
+      ctx.beginPath();ctx.arc(np.x,np.y,r+5,0,Math.PI*2);
+      ctx.strokeStyle=col;ctx.lineWidth=0.5;ctx.globalAlpha=0.3;ctx.stroke();ctx.globalAlpha=1;
+    }
+
+    ctx.fillStyle=col;ctx.font="9px sans-serif";ctx.textAlign="center";ctx.fillText(def.icon,np.x,np.y+3);
+    ctx.fillStyle="#444";ctx.font="7px monospace";ctx.fillText(s.label,np.x,np.y+19);
+    if(mode==="setup"){
+      if(s.buildingLabel){
+        ctx.fillStyle="#BA7517";ctx.font="7px monospace";ctx.globalAlpha=0.7;
+        ctx.fillText("⬡ "+s.buildingLabel,np.x,np.y+27);ctx.globalAlpha=1;
+      }
+      if(s.mqttId){
+        ctx.fillStyle="#2a2a2a";ctx.font="7px monospace";
+        ctx.fillText(s.mqttId,np.x,np.y+(s.buildingLabel?35:27));
+      }
+    }
+  });
+
+  // Router
+  const rp=mp(router.mx,router.my);
+  ctx.beginPath();ctx.arc(rp.x,rp.y,13,0,Math.PI*2);
+  ctx.fillStyle="#185FA5";ctx.globalAlpha=0.9;ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle="rgba(255,255,255,0.2)";ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle="#fff";ctx.font="bold 11px monospace";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("R",rp.x,rp.y);ctx.textBaseline="alphabetic";
+  ctx.fillStyle="#444";ctx.font="7px monospace";ctx.textAlign="center";
+  ctx.fillText("Router",rp.x,rp.y+22);ctx.fillText(`(${router.mx},${router.my})`,rp.x,rp.y+30);
+
+  // Jammer (sim)
+  if(mode==="sim"){
+    const jp=mp(jammer.mx,jammer.my);
+    ctx.beginPath();ctx.arc(jp.x,jp.y,13,0,Math.PI*2);
+    ctx.fillStyle="#A32D2D";ctx.globalAlpha=0.9;ctx.fill();ctx.globalAlpha=1;
+    ctx.strokeStyle="rgba(255,255,255,0.2)";ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle="#fff";ctx.font="bold 11px monospace";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText("J",jp.x,jp.y);ctx.textBaseline="alphabetic";
+    ctx.fillStyle="#E24B4A";ctx.font="7px monospace";ctx.textAlign="center";
+    ctx.fillText("Jammer",jp.x,jp.y+22);ctx.fillText(`(${jammer.mx},${jammer.my})`,jp.x,jp.y+30);
+  }
+
+  // Tool hint
+  if(activeTool&&mode==="setup"){
+    const def=activeTool==="sensor"?SENSOR_DEFS[activeSensorType]:null;
+    const col=def?def.color:"#BA7517";
+    ctx.fillStyle=col;ctx.font="10px sans-serif";ctx.textAlign="center";ctx.globalAlpha=0.7;
+    ctx.fillText(
+      activeTool==="building"
+        ?`Click to place ${BLDG_DEFS[activeBldgType].label} · Shift = free place`
+        :`Click to place ${activeSensorType} sensor · Shift = anywhere`,
+      CW/2,CH-10);ctx.globalAlpha=1;
+  }
+  ctx.textAlign="left";
+}
+
+// ─── Grid ─────────────────────────────────────────────────────────────────────
+function renderGrid(){
+  const grid=document.getElementById("node-grid");
+  grid.innerHTML="";
+  document.getElementById("s-bldg").textContent=buildings.length;
+  document.getElementById("s-sens").textContent=sensors.length;
+  const configured=sensors.filter(s=>s.sensor&&s.mqttId).length;
+  document.getElementById("s-cfg").textContent=configured;
+  let atRisk=0;
+
+  if(mode==="setup"){
+    buildings.forEach(b=>{
+      const def=BLDG_DEFS[b.btype]||BLDG_DEFS.story3;
+      const isSel=selId===b.id;
+      const t=document.createElement("div");
+      t.className="nt";t.style.borderColor=isSel?"#BA7517":"#2e2e30";t.style.background=isSel?"rgba(186,119,23,0.08)":"";
+      t.innerHTML=`<div class="nt-icon" style="color:#BA7517">□</div><div class="nt-lbl">${b.label}</div><div class="nt-sub">${def.h>0?def.h+"in":""}</div>`;
+      t.onclick=()=>selectItem(b.id,"building");grid.appendChild(t);
+    });
+  }
+
+  sensors.forEach(s=>{
+    const def=SENSOR_DEFS[s.stype]||SENSOR_DEFS.environmental;
+    const isSel=selId===s.id;
+    let col=def.color,jsText="",lossText="";
+    if(mode==="sim"){
+      const{js,loss}=getSData(s);col=lCol(loss);
+      jsText=`<div class="nt-js" style="color:${col}">${js>=0?"+":""}${js.toFixed(1)}dB</div>`;
+      lossText=`<div class="nt-loss" style="color:${col}">${loss}%</div>`;
+      if(loss>=20)atRisk++;
+    }
+    const isConfigured=s.sensor&&s.mqttId;
+    const t=document.createElement("div");
+    t.className="nt";t.style.borderColor=isSel?col:"#2e2e30";t.style.background=isSel?col+"14":"";
+    t.innerHTML=`<div class="nt-icon" style="color:${col}">${def.icon}</div>
+      <div class="nt-lbl">${s.label}</div>
+      ${s.buildingLabel?`<div class="nt-sub" style="color:#BA7517">⬡ ${s.buildingLabel}</div>`:""}
+      <div class="nt-sub" style="color:${isConfigured?"#1D9E75":"#555"}">${isConfigured?s.mqttId:"unconfigured"}</div>
+      ${jsText}${lossText}`;
+    t.onclick=()=>{
+      selectItem(s.id,"sensor");
+      if(mode==="sim"){document.getElementById("detail-panel").style.display="block";const sx=sensors.find(x=>x.id===s.id);if(sx)renderDetail(sx);}
+    };
+    grid.appendChild(t);
+  });
+
+  if(mode==="sim"){
+    const sr=document.getElementById("s-risk");
+    sr.textContent=sensors.length===0?"no sensors":`${atRisk}/${sensors.length}`;
+    sr.style.color=atRisk===0?"#1D9E75":atRisk>sensors.length/2?"#E24B4A":"#BA7517";
+  } else {document.getElementById("s-risk").textContent="—";}
+}
+
+function renderDetail(s){
+  const def=SENSOR_DEFS[s.stype]||SENSOR_DEFS.environmental;
+  const{js,loss,dSig,dJam,sigDbm,jamDbm}=getSData(s);
+  const col=lCol(loss);
+  const status=loss<20?"Nominal":loss<50?"Degraded":"Blackout";
+  const pillC=loss<20?"pill-ok":loss<50?"pill-w":"pill-c";
+  const ds=+document.getElementById("dsig").value,dj=+document.getElementById("djam").value;
+  const delta=+(js-jsR(ds,dj)).toFixed(1);
+  const interp=loss<20
+    ?`${s.label}${s.sensor?" ("+s.sensor+")":""} maintains a healthy link. Router ${sigDbm} dBm vs jammer ${jamDbm} dBm. Predicted loss ${loss}%.`
+    :loss<50
+      ?`${s.label} is partially disrupted — J/S is ${delta>=0?"+":""}${delta} dB worse than your bladeRF baseline. Expect buffering and gaps. Predicted loss: ${loss}%.`
+      :`${s.label} would go dark. Jammer (${jamDbm} dBm) overwhelms router (${sigDbm} dBm) by ${Math.abs(js).toFixed(1)} dB. All sensor data lost.`;
+
+  document.getElementById("detail-panel").innerHTML=`
+    <div class="dp-hdr">
+      <span style="font-size:18px;color:${col}">${def.icon}</span>
+      <span style="font-size:14px;font-weight:500;color:${col}">${s.label}</span>
+      ${s.sensor?`<span style="font-size:11px;color:#555">${s.sensor}</span>`:""}
+      <span class="pill ${pillC}">${status}</span>
+      ${s.mqttId?`<code style="font-size:9px">smartcity/${s.mqttId}</code>`:""}
+    </div>
+    <div class="dg">
+      <div class="ds"><div class="ds-l">J/S ratio</div><div class="ds-v" style="color:${col}">${js>=0?"+":""}${js.toFixed(1)}<span style="font-size:10px;color:#555"> dB</span></div></div>
+      <div class="ds"><div class="ds-l">Pred. loss</div><div class="ds-v" style="color:${col}">${loss}<span style="font-size:10px;color:#555">%</span></div></div>
+      <div class="ds"><div class="ds-l">Signal rcvd</div><div class="ds-v">${sigDbm}<span style="font-size:10px;color:#555"> dBm</span></div></div>
+      <div class="ds"><div class="ds-l">Jammer rcvd</div><div class="ds-v" style="color:#E24B4A">${jamDbm}<span style="font-size:10px;color:#555"> dBm</span></div></div>
+      <div class="ds"><div class="ds-l">D to router</div><div class="ds-v">${dSig}<span style="font-size:10px;color:#555"> m</span></div></div>
+      <div class="ds"><div class="ds-l">D to jammer</div><div class="ds-v">${dJam}<span style="font-size:10px;color:#555"> m</span></div></div>
+      <div class="ds"><div class="ds-l">RF band</div><div class="ds-v" style="font-size:11px">${s.rfFrequency||"—"}</div></div>
+      <div class="ds"><div class="ds-l">Δ from lab</div><div class="ds-v" style="color:${delta>5?"#E24B4A":delta>0?"#BA7517":"#1D9E75"}">${delta>=0?"+":""}${delta}<span style="font-size:10px;color:#555"> dB</span></div></div>
+    </div>
+    <div class="interp">${interp}</div>`;
+}
+
+function update(){draw();renderGrid();}
+
+function simUpdate(){
+  document.getElementById("jtx-v").textContent=document.getElementById("jtx").value+" dBm";
+  document.getElementById("jgain-v").textContent=document.getElementById("jgain").value+" dB";
+  document.getElementById("rtx-v").textContent=document.getElementById("rtx").value+" dBm";
+  document.getElementById("dsig-v").textContent=(+document.getElementById("dsig").value).toFixed(1)+" m";
+  document.getElementById("djam-v").textContent=(+document.getElementById("djam").value).toFixed(1)+" m";
+  document.getElementById("lloss-v").textContent=document.getElementById("lloss").value+"%";
+  labLoss=+document.getElementById("lloss").value;
+  if(sensors.some(s=>getSData(s).loss>=50))triggerPulse();
+  update();
+  if(selId&&selKind==="sensor"){const s=sensors.find(x=>x.id===selId);if(s){document.getElementById("detail-panel").style.display="block";renderDetail(s);}}
+}
+
+function setEnv(name,val,btn){
+  n=val;document.querySelectorAll(".eb").forEach(b=>b.classList.remove("active"));btn.classList.add("active");simUpdate();
+}
+
+function setScenario(type){
+  if(type==="lab"){jammer.mx=-1.04;jammer.my=-1.24;}
+  else if(type==="center"){jammer.mx=0;jammer.my=0;}
+  else if(type==="north"){jammer.mx=0;jammer.my=1.5;}
+  else if(type==="worst"){jammer.mx=0;jammer.my=0;document.getElementById("jtx").value=40;document.getElementById("jgain").value=20;}
+  simUpdate();
+}
+
+function applyRSSI(){
+  const v=parseFloat(document.getElementById("rssi-in").value);if(isNaN(v))return;
+  labRSSI=v;document.getElementById("s-rssi").textContent=v+" dBm";save();simUpdate();
+}
+function parseJSON(){
+  try{
+    const data=JSON.parse(document.getElementById("api-json").value.trim());
+    const vals=data.filter(d=>d.metric==="wifi_rssi").map(d=>d.value);
+    if(!vals.length)return;
+    labRSSI=+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+    document.getElementById("s-rssi").textContent=labRSSI+" dBm";
+    document.getElementById("rssi-in").value=labRSSI;
+    save();simUpdate();
+  }catch(e){}
+}
+
+// ─── Input ────────────────────────────────────────────────────────────────────
+function getCP(e){
+  const r=canvas.getBoundingClientRect();const sx=CW/r.width;
+  const t=e.touches?e.touches[0]:e;
+  return{px:(t.clientX-r.left)*sx,py:(t.clientY-r.top)*sx};
+}
+function hitC(px,py,obj,rad){const p=mp(obj.mx,obj.my);return d2(px,py,p.x,p.y)<rad;}
+function hitB(px,py,b){const tl=mp(b.mx-b.w/2,b.my+b.h/2),br=mp(b.mx+b.w/2,b.my-b.h/2);return px>=tl.x&&px<=br.x&&py>=tl.y&&py<=br.y;}
+
+canvas.addEventListener("mousedown",e=>{
+  const{px,py}=getCP(e);const m=pm(px,py);
+  if(mode==="setup"&&activeTool){
+    if(activeTool==="building")placeBuilding(m.x,m.y);
+    else placeSensor(m.x,m.y);
+    activeTool=null;
+    document.getElementById("btn-pb").className="";
+    document.getElementById("btn-ps").className="";
+    canvas.style.cursor="default";return;
+  }
+  if(mode==="sim"&&hitC(px,py,jammer,18)){drag="jammer";const jp=mp(jammer.mx,jammer.my);dragOff={x:px-jp.x,y:py-jp.y};return;}
+  if(hitC(px,py,router,18)){drag="router";const rp=mp(router.mx,router.my);dragOff={x:px-rp.x,y:py-rp.y};return;}
+  const hitS=sensors.find(s=>hitC(px,py,s,14));
+  if(hitS){drag="sensor:"+hitS.id;const sp=mp(hitS.mx,hitS.my);dragOff={x:px-sp.x,y:py-sp.y};selectItem(hitS.id,"sensor");return;}
+  const hitBldg=buildings.find(b=>hitB(px,py,b));
+  if(hitBldg&&mode==="setup"){drag="building:"+hitBldg.id;const bp=mp(hitBldg.mx,hitBldg.my);dragOff={x:px-bp.x,y:py-bp.y};selectItem(hitBldg.id,"building");return;}
+  deselect();
+});
+
+canvas.addEventListener("mousemove",e=>{
+  if(!drag)return;
+  const{px,py}=getCP(e);
+  if(drag==="jammer"){const m=pm(px-dragOff.x,py-dragOff.y);jammer.mx=m.x;jammer.my=m.y;simUpdate();}
+  else if(drag==="router"){const m=pm(px-dragOff.x,py-dragOff.y);router.mx=m.x;router.my=m.y;save();update();}
+  else if(drag.startsWith("sensor:")){
+    const s=sensors.find(x=>x.id===drag.split(":")[1]);
+    if(s){const m=pm(px-dragOff.x,py-dragOff.y);s.mx=m.x;s.my=m.y;
+      if(selId===s.id){document.getElementById("s-x").value=s.mx;document.getElementById("s-y").value=s.my;}
+      save();update();}
+  } else if(drag.startsWith("building:")){
+    const b=buildings.find(x=>x.id===drag.split(":")[1]);
+    if(b){const raw=pm(px-dragOff.x,py-dragOff.y);const sn=shiftHeld?raw:snapOrFree(raw.x,raw.y);
+      b.mx=sn.mx;b.my=sn.my;
+      if(selId===b.id){document.getElementById("b-x").value=b.mx;document.getElementById("b-y").value=b.my;}
+      save();update();}
+  }
+});
+
+canvas.addEventListener("mouseup",()=>{drag=null;});
+canvas.addEventListener("mouseleave",()=>{drag=null;});
+window.addEventListener("keydown",e=>{shiftHeld=e.shiftKey;});
+window.addEventListener("keyup",e=>{shiftHeld=e.shiftKey;});
+canvas.addEventListener("touchstart",e=>{e.preventDefault();canvas.dispatchEvent(new MouseEvent("mousedown",{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY}));},{passive:false});
+canvas.addEventListener("touchmove",e=>{e.preventDefault();canvas.dispatchEvent(new MouseEvent("mousemove",{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY}));},{passive:false});
+canvas.addEventListener("touchend",e=>{e.preventDefault();canvas.dispatchEvent(new MouseEvent("mouseup"));},{passive:false});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+load();
+setMode("setup");
+</script>
+</body>
+</html>
