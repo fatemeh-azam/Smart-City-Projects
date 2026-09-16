@@ -38,7 +38,7 @@ To connect real sensors:
 
 ```powershell
 $env:DEMO_MODE="false"
-$env:MQTT_BROKER="mqtt://192.168.1.84:1883"
+$env:MQTT_BROKER="mqtt://X.X.X.X:1883"
 node server.js
 ```
 
@@ -100,7 +100,7 @@ smartcity/<node_id>/<metric>
 | cf-e9 | drone | 2.4 GHz | telemetry (full JSON on smartcity/cf-e9/telemetry) |
 | cf-e8 | drone | 2.4 GHz | telemetry (full JSON on smartcity/cf-e8/telemetry) |
 
-### Drone Telemetry Payload Published by `landing_swarm_victim.py` via paho-mqtt
+### Drone Telemetry Payload Published by `mqtt_swarm_victim.py` via paho-mqtt
 
 ```json
 {
@@ -173,7 +173,7 @@ WAL mode enabled for concurrent read/write performance during active sensor stre
 #### Log a jamming session (from any machine on the network)
 
 ```bash
-curl -X POST http://192.168.1.84:3001/api/jamming-sessions \
+curl -X POST http://X.X.X.X:3001/api/jamming-sessions \
   -H "Content-Type: application/json" \
   -d '{
     "started_at": "2026-09-02T18:31:14Z",
@@ -286,9 +286,9 @@ smartcity-monitor/
 
 ## Drone Mission Script
 
-`landing_swarm_victim.py` — runs in VM on same machine as MQTT broker.
+`mqtt_swarm_victim.py` - publishes to MQTT.
 
-- Uses cflib + Lighthouse deck (no Flow deck)
+- Uses cflib + Lighthouse deck
 - Three LogConfigs to stay within firmware slot limit (BatteryMonitor uses 7 slots):
   - `Pos` (3 vars, 600ms): stateEstimate.x/y/z
   - `Att` (1 var, 600ms): stateEstimate.yaw
