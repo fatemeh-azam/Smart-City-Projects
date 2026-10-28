@@ -2,7 +2,7 @@
 
 Software for flying multi-drone delivery missions on a small indoor smart-city
 testbed, and for monitoring those flights in real time. It runs on Bitcraze
-Crazyflie drones with the Loco Positioning System, and was built at the
+Crazyflie drones with the lighthouse positioning system, and was built at the
 Oklahoma Cyber Innovation Institute (University of Tulsa) as the flight side of
 our micro-UAV security research.
 
