@@ -2,19 +2,24 @@
 
 Software for flying multi-drone delivery missions on a small indoor smart-city
 testbed, and for monitoring those flights in real time. It runs on Bitcraze
-Crazyflie drones with the lighthouse positioning system, and was built at the
+Crazyflie drones with the Loco Positioning System, and was built at the
 Oklahoma Cyber Innovation Institute (University of Tulsa) as the flight side of
 our micro-UAV security research.
 
+![Flight monitor with one drone off route and one with a telemetry gap](docs/flight-monitor.png)
 
 ## What's here
 
 | File | What it does |
 | --- | --- |
-| `swarm_mission.py` | Flies every drone in parallel along a grid-aligned delivery route, with a descent at each drop-off, battery checks before every leg, and buffered telemetry logging. |
+| `missions.py` | Start points and delivery points for each drone, plus the route generator. Every other script reads routes from here. |
+| `swarm_mission.py` | Flies every drone in parallel along its delivery route with one `go_to` command per leg, a descent at each drop-off, battery checks before every leg, and buffered telemetry logging. |
+| `fly_trajectories.py` | Flies the same routes as one smooth trajectory per drone, uploaded to the drone and flown onboard, with the ground station still watching the battery. |
+| `trajectories.py` | Builds, checks, evaluates, saves and uploads 7th-order polynomial trajectories in the Crazyflie format. |
+| `plot_trajectory.py` | Top view, 3D view and height-over-time plots for the mission trajectories or any trajectory CSV. |
 | `battery_monitor.py` | A small library on top of the Crazyflie's power telemetry. Returns a continue / return-to-base / land decision and estimates remaining flight time from a recorded discharge. |
 | `flight_monitor.py` | Rule-based monitor. Flags drones that leave their route or stop sending telemetry, records each outage, and shows a live map with an event log. |
-| `missions.py` | Start points and delivery points for each drone, plus the route generator. The mission runner and the monitor both read from here. |
+| `flight_common.py` | Shared by both flight scripts: telemetry logging, battery handling, return-to-base and the kill switch. |
 | `simulate_telemetry.py` | Writes realistic telemetry logs, with optional drift and dropouts, so the monitor can be tried without drones. |
 
 ## Try it without drones
@@ -30,8 +35,10 @@ python simulate_telemetry.py --drift 1 --gap 2
 ```
 
 ```bash
-python swarm_mission.py --dry-run   # print each drone's route, no radio needed
-python -m pytest                    # run the tests
+python swarm_mission.py --dry-run      # print each drone's route, no radio needed
+python fly_trajectories.py --dry-run   # print each drone's trajectory segments
+python plot_trajectory.py              # plot the mission trajectories
+python -m pytest                       # run the tests
 ```
 
 ## Flying a mission
@@ -53,14 +60,85 @@ to reach a delivery point when it isn't on the street, descends 0.7 m to
 simulate the drop-off, climbs back, and continues. When the route is done it
 flies back to the start point and lands.
 
+There are two ways to fly the same routes:
+
 ```bash
 python flight_monitor.py --clean   # optional: start the monitor first
-python swarm_mission.py
+
+python swarm_mission.py            # waypoint by waypoint, one go_to per leg
+python fly_trajectories.py         # one smooth onboard trajectory per drone
 ```
+
+| | `swarm_mission.py` | `fly_trajectories.py` |
+| --- | --- | --- |
+| How the route is sent | A `go_to` command for every leg | The whole route uploaded once, flown onboard |
+| Motion | Stops and settles at every waypoint | Continuous, with smooth corners and drop-offs |
+| Mission time (drone 1), takeoff to landing | About 2 min 45 s | About 1 min 15 s |
+| Battery checks | Before every leg | Every 0.5 s during the trajectory |
+| Change the route mid-flight | Easy: the next command can differ | Needs a new upload |
+
+Both write the same telemetry logs, so the flight monitor works with either.
 
 **Safety.** There is no obstacle avoidance; check every route against the room
 before flying. **Ctrl+C is a kill switch**: it cuts the motors on every drone
 immediately, so fly over a net or soft floor.
+
+## Trajectories
+
+![Both delivery missions as smooth trajectories](docs/delivery-trajectories.png)
+
+The Crazyflie's high-level commander can store a trajectory onboard and fly
+it by itself. A trajectory is a list of segments, each a 7th-order polynomial
+in time for x, y, z and yaw.
+
+`trajectories.delivery_trajectory()` turns a mission from `missions.py` into
+one. Every leg is a rest-to-rest polynomial: the drone starts and stops each
+leg with zero velocity, acceleration and jerk, so it rounds the grid's
+90-degree corners smoothly. At each delivery point it descends to 0.3 m,
+hovers for a second and climbs back. Leg durations come from a peak-speed
+limit (`--max-speed`, 0.5 m/s by default; 0.4 m/s vertically).
+
+```python
+from trajectories import delivery_trajectory, save_csv, upload, describe
+
+segs = delivery_trajectory((0.4, -1.85), [(0.85, -1.24), (0.85, 0.95)])
+print(describe(segs))            # segments, total time, peak speed
+save_csv("drone1.csv", segs)
+upload(cf, segs, trajectory_id=1)
+cf.high_level_commander.start_trajectory(1)
+```
+
+`upload()` refuses a trajectory with a gap between segments, or one longer
+than the drone's trajectory memory holds. The standard 4 KB memory holds 31
+segments; the drone 1 mission uses 19.
+
+```bash
+python plot_trajectory.py                        # mission trajectories
+python plot_trajectory.py examples/figure8.csv   # any trajectory file
+python fly_trajectories.py --export-csv out/     # save the mission trajectories
+```
+
+### Trajectory file format
+
+One segment per row, 33 numbers, with an optional header row:
+
+```
+duration, x^0 … x^7, y^0 … y^7, z^0 … z^7, yaw^0 … yaw^7
+```
+
+Within a segment, with `t` from 0 to `duration` seconds:
+
+```
+x(t) = x^0 + x^1·t + x^2·t² + … + x^7·t⁷
+```
+
+and the same for y, z and yaw (radians). Segments run back to back, so each
+starts where the previous one ended. This is the layout Bitcraze's tools use.
+
+`examples/figure8.csv` is the figure-8 from Bitcraze's crazyflie-lib-python
+examples. Its height coefficients are all zero because it is meant to be flown
+relative to the drone's hover position
+(`start_trajectory(id, relative_position=True)`).
 
 ## Battery monitor
 
