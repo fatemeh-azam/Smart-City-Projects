@@ -1,0 +1,3 @@
+cflib>=0.1.25
+matplotlib>=3.7
+pytest>=7  # tests only
