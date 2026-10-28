@@ -6,7 +6,6 @@ Crazyflie drones with the lighthouse positioning system, and was built at the
 Oklahoma Cyber Innovation Institute (University of Tulsa) as the flight side of
 our micro-UAV security research.
 
-![Flight monitor with one drone off route and one with a telemetry gap](docs/flight-monitor.png)
 
 ## What's here
 
